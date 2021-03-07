@@ -10,190 +10,99 @@ import json
 
 
 app = Flask(__name__)
-
-cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
-
-@app.route('/api/time')
-def get_current_time():
-	return {'time': time.time()}
-
-@app.route('/api/users_data')
-def get_users_data():
-	return { "users": [
-		{'name': 'Rafael', 'birth_year': 1993},
-		{'name': 'Laura', 'birth_year': 1999}
-	]}
-
-@app.route('/api/clients')
-def get_clients_data():
-	return { "clients": [
-		{'name': 'React Industries', 'year_est': 2006, 'type': 'corporation'},
-		{'name': 'DeGaetano Engineered Solutions', 'year_est': 2020, 'type': 'Person'},
-		{'name': 'Tonka', 'year_est': 2017, 'type': 'Person'},
-		{'name': 'CuerAutos', 'year_est': 2015, 'type': 'Person'}
-	]}
+cors = CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
 
 @app.route('/api/first_grade/', methods=['POST'])
 def first_grade():
-	
-	if 'file' not in request.files:
-		print('THERE IS NO FILE')
-	else:
-		file_from_react = request.files['file']
-		df = pd.read_csv(file_from_react)
-		print(df)
+    if 'file' not in request.files:
+        print('THERE IS NO FILE')
+    else:
+        file_from_react = request.files['file']
+        df = pd.read_csv(file_from_react)
+        publications_per_year = {}
+        publications_per_year_pd = df['Year'].value_counts()
+        counter_years = 0
+        for row in publications_per_year_pd:
+            index_string = str(publications_per_year_pd.index[counter_years])
+            publications_per_year[index_string] = row
+            counter_years += 1
+        
+        publications_per_author = {}
+        authors_df = df['Authors'].str.split(', ')
+        authors_df = authors_df.explode('Authors').reset_index(drop=True)
+        authors_df = authors_df[authors_df != "[No author name available]"]
+        publications_per_author_pd = authors_df.value_counts()
+        counter_authors = 0
+        for row in publications_per_author_pd:
+            index_string = str(publications_per_author_pd.index[counter_authors])
+            publications_per_author[index_string] = row
+            counter_authors += 1
+        publications_per_affiliations = {}
+        affiliations_df = df['Affiliations'].str.split('; ')
+        affiliations_df = affiliations_df.explode('Affiliations').reset_index(drop=True)
+        publications_per_affiliations_pd = affiliations_df.value_counts()
+        counter_affiliations = 0
+        for row in publications_per_affiliations_pd:
+            index_string = str(publications_per_affiliations_pd.index[counter_affiliations])
+            publications_per_affiliations[index_string] = row
+            counter_affiliations += 1
 
-		publications_per_year = {}
-		publications_per_year_pd = df['Year'].value_counts()
-		counter_years = 0
-		for row in publications_per_year_pd:
-			index_string = str(publications_per_year_pd.index[counter_years])
-			publications_per_year[index_string] = row
-			counter_years += 1
-		
-		publications_per_author = {}
-		authors_df = df['Authors'].str.split(', ')
-		authors_df = authors_df.explode('Authors').reset_index(drop=True)
-		authors_df = authors_df[authors_df != "[No author name available]"]
-		publications_per_author_pd = authors_df.value_counts()
-		counter_authors = 0
-		for row in publications_per_author_pd:
-			index_string = str(publications_per_author_pd.index[counter_authors])
-			publications_per_author[index_string] = row
-			counter_authors += 1
-
-		publications_per_affiliations = {}
-		affiliations_df = df['Affiliations'].str.split('; ')
-		affiliations_df = affiliations_df.explode('Affiliations').reset_index(drop=True)
-		publications_per_affiliations_pd = affiliations_df.value_counts()
-		counter_affiliations = 0
-		for row in publications_per_affiliations_pd:
-			index_string = str(publications_per_affiliations_pd.index[counter_affiliations])
-			publications_per_affiliations[index_string] = row
-			counter_affiliations += 1
+        return {'pubs_per_year': publications_per_year, 'pubs_per_author': publications_per_author, 'pubs_per_affiliation': publications_per_affiliations}
 
 
-		return {'pubs_per_year': publications_per_year, 'pubs_per_author': publications_per_author, 'pubs_per_affiliation': publications_per_affiliations}
+@app.route('/api/second_grade/', methods=['POST'])
+def second_grade():
+    if 'file' not in request.files:
+        print('THERE IS NO FILE')
+    else:
+        file_from_react = request.files['file']
+        df = pd.read_csv(file_from_react)
+        authors = df['Authors'].str.split(', ')
+        authors = authors.explode('Authors').reset_index(drop=True)
+        authors = authors[authors != "[No author name available]"]
+        cites_per_author_df = pd.DataFrame(data={author: [df[df['Authors'].str.contains(author, na=False)]['Cited by'].sum()] for author in authors}).T
+        cites_per_author_list = []
+        for author in cites_per_author_df.index:
+            author_cite_number = {}
+            author_cite_number[author] = cites_per_author_df.loc[author, 0]
+            cites_per_author_list.append(author_cite_number)
+        
+        sources = set(df['Source title'])
+        cites_per_source_df = pd.DataFrame(data={source: [df[df['Source title'].str.contains(source, na=False)]['Cited by'].sum()] for source in sources if type(source) == str}).T
+        cites_per_source_list = []
+        for source in cites_per_source_df.index:
+            source_cite_number = {}
+            source_cite_number[source] = cites_per_source_df.loc[source, 0]
+            cites_per_source_list.append(source_cite_number)
+        
+        papers = set(df['Title'])
+        cites_per_paper_df = pd.DataFrame(data={paper: [df[df['Title'] == paper]['Cited by'].sum()] for paper in papers}).T
+        cites_per_paper_list = []
+        for paper in cites_per_paper_df.index:
+            paper_cite_number = {}
+            paper_cite_number[paper] = cites_per_paper_df.loc[paper, 0]
+            cites_per_paper_list.append(paper_cite_number)
+
+        return {'cites_per_author': cites_per_author_list, 'cites_per_source': cites_per_source_list, 'cites_per_paper': cites_per_paper_list}
 
 
-@app.route('/api/first_grade_analysis/', methods=['GET'])
-def first_grade_analysis():
-	authors = request.args.get('authorsParam')
-	years = request.args.get('yearsParam')
-	affiliations = request.args.get('affiliationsParam')
-	authors_list = []
-	years_list = []
-	affiliations_list = []
-	authors_list.append(authors.split('","'))
-	years_list.append(years.split('","'))
-	affiliations_list.append(affiliations.split('","'))
-	all_authors = []
-	all_years = []
-	all_affiliations = []
-	final_author_list = []
-	publications_per_author = {}
-	publications_per_year = {}
-	publications_per_affiliation = {}
-	for scientific_paper_authors in authors_list[0]:
-		for character in scientific_paper_authors:
-			if character == "[":
-				scientific_paper_authors = scientific_paper_authors.replace('[','')
-			if character == '"':
-				scientific_paper_authors = scientific_paper_authors.replace('"','')
-			if character == "]":
-				scientific_paper_authors = scientific_paper_authors.replace(']','')
-		all_authors.append(scientific_paper_authors)
-	for author_in_paper in all_authors:
-		temp = author_in_paper.split(', ')
-		for i in range(len(temp)):
-			if len(temp[i]) > 0:
-				final_author_list.append(temp[i])
-	for author in final_author_list:
-		if len(publications_per_author) == 0:
-			publications_per_author[author] = 1
-		elif author in publications_per_author:
-			publications_per_author[author] += 1
-		else:
-			publications_per_author[author] = 1
-	for year in years_list[0]:
-		for character in year:
-			if character == "[":
-				year = year.replace('[','')
-			if character == '"':
-				year = year.replace('"','')
-			if character == "]":
-				year = year.replace(']','')
-			if character == " ":
-				year = year.replace(" ","")
-		if len(year) > 1:
-			all_years.append(year)
-	for affiliation in affiliations_list[0]:
-		counter = 0
-		for character in affiliation:
-			if character == "[":
-				affiliation = affiliation.replace('[','')
-			if character == "[ ":
-				affiliation = affiliation.replace('[ ','')
-			if character == '"':
-				affiliation = affiliation.replace('"','')
-			if character == '" ':
-				affiliation = affiliation.replace('" ','')
-			if character == "]":
-				affiliation = affiliation.replace(']','')
-			counter += 1
-		if len(affiliation) > 1:
-			all_affiliations.append(affiliation)
-	for year in all_years:
-		if len(publications_per_year) == 0:
-			publications_per_year[year] = 1
-		elif year in publications_per_year:
-			publications_per_year[year] += 1
-		else:
-			publications_per_year[year] = 1
-	for scientific_paper_affiliations in all_affiliations:
-		temp = scientific_paper_affiliations.split('; ')
-		for i in range(len(temp)):
-			if len(temp[i]) > 0:
-				if len(publications_per_affiliation) == 0:
-					publications_per_affiliation[temp[i]] = 1
-				elif temp[i] in publications_per_affiliation:
-					publications_per_affiliation[temp[i]] += 1
-				else:
-					publications_per_affiliation[temp[i]] = 1
-	return {'publications_per_author':publications_per_author, 'publications_per_year':publications_per_year,'publications_per_affiliation': publications_per_affiliation}
-
-
-@app.route('/api/send_json_data_to_api', methods=['POST'])
-def send_json_data_to_api():
-	require_data = request.data
-	require_data = json.loads(require_data)
-	printTest(require_data)
-	return "True"
-
-def printTest(data):
-	authors = []
-	authors_list = []
-	affiliations = []
-	years = []
-	publications_per_author = {}
-	for dictionary in data:
-		authors.append(dictionary.get('Authors'))
-		affiliations.append(dictionary.get('Affiliations'))
-		years.append(dictionary.get('Year'))
-	for author in authors:
-		authors_list.append(author.split(', '))
-	for scientific_paper in authors_list:
-		for author in scientific_paper:
-			if len(publications_per_author) == 0:
-				publications_per_author[author] = 1
-			elif author in publications_per_author:
-				publications_per_author[author] += 1
-			else:
-				publications_per_author[author] = 1
-	print(Counter(years))
-	print(publications_per_author)
-	print(Counter(affiliations))
-
-	return ("Test Completed")
-
+@app.route('/api/third_grade/', methods=['POST'])
+def third_grade():
+    if 'file' not in request.files:
+        print('There is no file')
+    else:
+        file_from_react = request.files['file']
+        df = pd.read_csv(file_from_react)
+        authors = df['Authors'].str.split(', ')
+        authors = authors.explode('Authors').reset_index(drop=True)
+        authors = authors[authors != "[No author name available]"]
+        sources_per_author = pd.DataFrame(
+        data={author: [df[df['Authors'].str.contains(author, na=False)]['Source title']] for author in authors})
+        num_sources_per_author_df = pd.DataFrame(data={author: [len(sources_per_author[author][0])] for author in authors}).T
+        sources_per_author_list = []
+        for author in num_sources_per_author_df.index:
+            sources_per_author_info = {}
+            sources_per_author_info[author] = int(num_sources_per_author_df.loc[author, 0])
+            sources_per_author_list.append(sources_per_author_info)
+        return {'num_sources_per_author': sources_per_author_list}
