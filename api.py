@@ -1,18 +1,20 @@
 import time
 from flask import Flask, request
-from flask_cors import CORS
+from flask_cors import CORS, cross_origin
 import json
 from collections import Counter
 import itertools
 import pandas as pd
 import io
 import json
+import scopus_scrapper as ss
 
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
 
+# First grade analysis
 @app.route('/api/first_grade/', methods=['POST'])
 def first_grade():
     # Make sure there is a file in the request
@@ -134,3 +136,16 @@ def third_grade():
             sources_per_author_info[author] = int(num_sources_per_author_df.loc[author, 0])
             sources_per_author_list.append(sources_per_author_info)
         return {'num_sources_per_author': sources_per_author_list}
+
+
+@app.route('/api/get_scopus/', methods=['POST'])
+@cross_origin()
+def get_scopus():
+    data_string = request.data.decode('UTF-8')
+    json_string = json.loads(data_string)
+    query_string = json_string['query']
+    print(query_string)
+    number_of_results = ss.check_query(query_string)
+    print(number_of_results)
+    return("get_scopus")
+
