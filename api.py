@@ -3,11 +3,11 @@ from flask import Flask, request
 from flask_cors import CORS, cross_origin
 import json
 from collections import Counter
-import itertools
 import pandas as pd
 import io
 import json
 import scopus_scrapper as ss
+import requests
 
 
 app = Flask(__name__)
@@ -144,8 +144,13 @@ def get_scopus():
     data_string = request.data.decode('UTF-8')
     json_string = json.loads(data_string)
     query_string = json_string['query']
+    api_key = json_string['apiKeyUser']
+    print(json_string)
     print(query_string)
-    number_of_results = ss.check_query(query_string)
-    print(number_of_results)
+    print(api_key)
+    response = requests.get('https://api.elsevier.com/content/search/scopus',
+                        headers={'Accept': 'application/json', 'X-ELS-APIKey': api_key},
+                        params={'query': query_string, 'view': 'COMPLETE'}).json()
+    print(response)
     return("get_scopus")
 
