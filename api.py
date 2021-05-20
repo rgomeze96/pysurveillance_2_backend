@@ -137,6 +137,45 @@ def third_grade():
             sources_per_author_list.append(sources_per_author_info)
         return {'num_sources_per_author': sources_per_author_list}
 
+def first_grade_scopus(dataframe_from_scrapper):
+    # Make sure there is a file in the request
+    # Make pandas dataframe from file
+    df = dataframe_from_scrapper
+    print('df inside first_grade_scrapper', df)
+    # Make object to store publications per year
+    publications_per_year = {}
+    # Get the number of publications per year
+    publications_per_year_pd = df['Year'].value_counts()
+    counter_years = 0
+    # Convert df to Python Object in order to send in return
+    for row in publications_per_year_pd:
+        index_string = str(publications_per_year_pd.index[counter_years])
+        publications_per_year[index_string] = row
+        counter_years += 1
+    
+    publications_per_author = {}
+    authors_df = df['Authors'].str.split(', ')
+    authors_df = authors_df.explode('Authors').reset_index(drop=True)
+    authors_df = authors_df[authors_df != "[No author name available]"]
+    publications_per_author_pd = authors_df.value_counts()
+    counter_authors = 0
+    # Convert df to Python Object in order to send in return
+    for row in publications_per_author_pd:
+        index_string = str(publications_per_author_pd.index[counter_authors])
+        publications_per_author[index_string] = row
+        counter_authors += 1
+    publications_per_affiliations = {}
+    affiliations_df = df['Affiliations'].str.split('; ')
+    affiliations_df = affiliations_df.explode('Affiliations').reset_index(drop=True)
+    publications_per_affiliations_pd = affiliations_df.value_counts()
+    counter_affiliations = 0
+    for row in publications_per_affiliations_pd:
+        index_string = str(publications_per_affiliations_pd.index[counter_affiliations])
+        publications_per_affiliations[index_string] = row
+        counter_affiliations += 1
+
+    return {'pubs_per_year': publications_per_year, 'pubs_per_author': publications_per_author, 'pubs_per_affiliation': publications_per_affiliations}
+
 
 @app.route('/api/get_scopus/', methods=['POST'])
 @cross_origin()
@@ -145,12 +184,10 @@ def get_scopus():
     json_string = json.loads(data_string)
     query_string = json_string['query']
     api_key = json_string['apiKeyUser']
-    print(json_string)
-    print(query_string)
-    print(api_key)
-    response = requests.get('https://api.elsevier.com/content/search/scopus',
-                        headers={'Accept': 'application/json', 'X-ELS-APIKey': api_key},
-                        params={'query': query_string, 'view': 'COMPLETE'}).json()
-    print(response)
+    print('query:', query_string)
+    print('API_KEY:', api_key)
+    number_results = ss.check_query(query_string)
+    scopus_data = ss.get_csv(number_results, query_string)
+    print(first_grade_scopus(scopus_data))
     return("get_scopus")
 
