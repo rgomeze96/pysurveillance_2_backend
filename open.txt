@@ -1,0 +1,2 @@
+ssh semillero@192.168.10.72
+AsdF13579

@@ -1,18 +1,62 @@
-import time
 from flask import Flask, request
+from flask.wrappers import Response
 from flask_cors import CORS, cross_origin
 import json
-from collections import Counter
+import nltk
 import pandas as pd
-import io
-import json
 import scopus_scrapper as ss
-import requests
+import numpy as np
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from string import punctuation
 
 
 app = Flask(__name__)
 cors = CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
+
+@app.route('/api/nlp/', methods=["POST"])
+@cross_origin()
+def nlp_processing():
+    if 'file' not in request.files:
+        print('THERE IS NO FILE')
+    else:
+        file_from_react = request.files['file']
+        df = pd.read_csv(file_from_react)
+        print(df)
+        search_params = request.form['searchParams']
+        if len(search_params) == 0:
+            return_string = 'Not possible to perfrom NLP without the search parameters'
+            return {'Not Possible': return_string}
+        else:
+            tokenized_params = word_tokenize(search_params)
+            print('Tokenized parameters: ', tokenized_params)
+            stop_words = stopwords.words('english')
+            filtered_params = [w for w in tokenized_params if not w.lower() in stop_words]
+            filtered_params = []
+            for w in tokenized_params:
+                if w not in stop_words:
+                    if w not in punctuation:
+                        w = w.lower()
+                        filtered_params.append(w)
+            print('First NLP, remove stopwords and punctuation: ', filtered_params)
+            df_titles = df['Title']
+            df_titles = df_titles.str.lower()
+            print('Document Titles: ', df_titles)
+            number_of_titles = len(df_titles)
+            
+            filtered_results = []
+            for i in range(number_of_titles):
+                print('Title',i, ':', df_titles[i])
+                for filtered_parameter in filtered_params:
+                    filtered_parameter = filtered_parameter.lower()
+                    result_locations = df_titles.str.contains(filtered_parameter)
+                    results = df_titles[result_locations]
+            print('Number of total results: ', number_of_titles)
+            print('Number of filtered results: ', len(results))
+            print('Filtered Results: ')
+            print(results)
+            return {'filtered_params': filtered_params}
 
 # First grade analysis
 @app.route('/api/first_grade/', methods=['POST'])
