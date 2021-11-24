@@ -27,8 +27,11 @@ def nlp_processing():
             first_grade_analysis = new_first_grade(df)
             second_grade_analysis = new_second_grade(df)
             third_grade_analysis = new_third_grade(df)
+            print('First Grade Analysis: ', first_grade_analysis)
+            print('Second Grade Analysis: ', second_grade_analysis)
+            print('Third Grade Analysis: ', third_grade_analysis)
             return {'total_results': number_of_titles, 'results_after_nlp':
-                'NLP not possible without search parameters', 'first_analysis': first_grade_analysis, 'second-analysis': second_grade_analysis, 'third_analysis': third_grade_analysis}
+                'NLP not possible without search parameters', 'first_analysis': first_grade_analysis, 'second_analysis': second_grade_analysis, 'third_analysis': third_grade_analysis}
         else:
             tokenized_params = word_tokenize(search_params)
             print('Tokenized parameters: ', tokenized_params)
@@ -59,7 +62,7 @@ def nlp_processing():
             print('Second Grade Analysis: ', second_grade_analysis)
             print('Third Grade Analysis: ', third_grade_analysis)
 
-            return {'total_results': number_of_titles, 'results_after_nlp': len(nlp_filtered_df), 'first_analysis': first_grade_analysis, 'second-analysis': second_grade_analysis,
+            return {'total_results': number_of_titles, 'results_after_nlp': len(nlp_filtered_df), 'first_analysis': first_grade_analysis, 'second_analysis': second_grade_analysis,
                     'third_analysis': third_grade_analysis}
 
 def new_first_grade(dataframe_for_analysis):
